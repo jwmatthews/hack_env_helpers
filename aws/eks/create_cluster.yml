@@ -140,9 +140,3 @@
         --service-account-role-arn {{ eks_ebs_csi_iam_role_arn.stdout }} \
         --force
       when: check_eks_ebs_csi_addon.rc != 0
-
-    roles:
-    - name: "Install metrics-server on {{ eks_clustername }} in {{ region_name }}"
-      role: metrics-server
-      kubeconfig: "{{ eks_kubeconfig }}"
-      tmp_dir: "{{ tmp_dir }}"
