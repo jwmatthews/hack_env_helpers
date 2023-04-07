@@ -12,3 +12,6 @@ eks_worker_mincount: 3
 eks_worker_maxcount: 6
 
 eks_ebs_csi_iam_role_name: "{{ eks_clustername }}-EKS_EBS_CSI_DriverRole"
+
+eks_kubeconfig: "./{{ eks_clustername }}.{{ region_name }}.kubeconfig"
+tmp_dir: "../../../tmp"
