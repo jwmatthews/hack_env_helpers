@@ -39,7 +39,7 @@
         eksctl utils write-kubeconfig \
         --cluster {{ eks_clustername }} \
         --region {{ region_name }} \
-        --kubeconfig="./{{ eks_clustername }}.{{ region_name }}.kubeconfig"
+        --kubeconfig={{ eks_kubeconfig }}
 
     # See https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html for enabling oidc-provider in EKS
     # 
@@ -141,3 +141,8 @@
         --force
       when: check_eks_ebs_csi_addon.rc != 0
 
+    roles:
+    - name: "Install metrics-server on {{ eks_clustername }} in {{ region_name }}"
+      role: metrics-server
+      kubeconfig: "{{ eks_kubeconfig }}"
+      tmp_dir: "{{ tmp_dir }}"
