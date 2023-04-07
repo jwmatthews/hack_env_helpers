@@ -1,0 +1,4 @@
+---
+# Override kubeconfig
+# We intend the kubeconfig value to be set higher up when playbook is invoked
+#kubeconfig: somepath

@@ -1,0 +1,22 @@
+---
+# Deploys the manifests from https://github.com/kubernetes-sigs/aws-ebs-csi-driver/tree/master/examples/kubernetes/dynamic-provisioning/manifests
+# to test dynamic provisioning
+
+- name: Create the 'test-ebs' namespace
+  kubernetes.core.k8s:
+    name: testebs
+    api_version: v1
+    kind: Namespace
+    state: present
+    kubeconfig: "{{ kubeconfig }}"
+
+- name: Create a PVC and a Pod to test dynamic provisioning
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ item }}"
+    kubeconfig: "{{ kubeconfig }}"
+  loop:
+    - testebs_claim.yaml
+    - testebs_pod.yaml
+
+
