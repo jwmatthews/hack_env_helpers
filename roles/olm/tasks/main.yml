@@ -1,0 +1,71 @@
+---
+# Download and apply manifests for OLM
+- name: Creates directory
+  file:
+    path: "{{ tmp_dir }}"
+    state: directory
+    mode: 0775
+
+- name: Download operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/crds.yaml
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/crds.yaml
+    dest: "{{ tmp_dir }}/olm_crds.yaml"
+    mode: '0664'
+
+- name: Download operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml 
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/operator-framework/operator-lifecycle-manager/master/deploy/upstream/quickstart/olm.yaml 
+    dest: "{{ tmp_dir }}/olm.yaml"
+    mode: '0664'
+
+- name: Apply OLM CRDs manifest to the cluster.
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ tmp_dir }}/olm_crds.yaml"
+    kubeconfig: "{{ kubeconfig }}"
+
+# Wait for OLM CRDs to be present
+- name: Wait for OLM CRDs to be present
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: "{{ item }}"
+    wait: yes
+    wait_condition:
+      type: Established
+      status: True
+      reason: InitialNamesAccepted
+  loop:
+    - catalogsources.operators.coreos.com
+    - clusterserviceversions.operators.coreos.com
+    - installplans.operators.coreos.com
+    - operatorconditions.operators.coreos.com
+    - operatorgroups.operators.coreos.com
+    - operators.operators.coreos.com
+    - subscriptions.operators.coreos.com
+
+- name: Apply the OLM manifest to the cluster
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ tmp_dir }}/olm.yaml"
+    kubeconfig: "{{ kubeconfig }}"
+
+# Wait for OLM deployments to be ready
+- name: Wait for OLM deployments
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ item }}"
+        namespace: "olm"
+    wait: yes
+    wait_condition:
+      type: Available
+      status: True
+  loop:
+    - catalog-operator
+    - olm-operator
+    - packageserver

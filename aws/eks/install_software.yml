@@ -12,3 +12,8 @@
     - name: "Install a simple app to test dynamic PV provisioning on {{ eks_clustername }} in {{ region_name }}"
       role: testebs
       kubeconfig: "{{ eks_kubeconfig }}"
+    
+    - name: "Install OLM on {{ eks_clustername }} in {{ region_name }}"
+      role: olm
+      kubeconfig: "{{ eks_kubeconfig }}"
+      tmp_dir: "{{ tmp_dir }}"
