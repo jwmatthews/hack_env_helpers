@@ -43,6 +43,7 @@ source env/bin/activate
    * This will install:
      * metrics-server
      * test program for dynamic PV provisioning
+     * OLM
      * Konveyor 
 
 ## Deprovision EKS Cluster

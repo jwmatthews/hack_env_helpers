@@ -1,3 +1,4 @@
 env
 *.kubeconfig
 my_override_vars.yml
+tmp/
