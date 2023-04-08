@@ -140,3 +140,130 @@
         --service-account-role-arn {{ eks_ebs_csi_iam_role_arn.stdout }} \
         --force
       when: check_eks_ebs_csi_addon.rc != 0
+
+    - name: Ensure temporary directory exists so we can download files
+      file:
+        path: "{{ tmp_dir }}"
+        state: directory
+        mode: 0775
+
+    ##
+    # Following steps from: https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html
+    ##
+
+    # As of April 2023, I do not see an AWS managed policy for the AWS Load Balancer Controller
+    # For example, with the EBSCSI Driver, there is an existing Amazon managed policy we can leverage
+    # For the LoadBalancer, we will need to create this policy ourselves.
+
+    # We will proceed to download a reference implementation of the policy
+    # Then attempt to create the policy, ignoring errors if it already exists
+    # Then we will look up the policy ARN and use that to create the ServiceAccount
+
+    # Unfortunately I do not see/know of a cleaner way to do this... 
+
+    # Download an IAM policy for the AWS Load Balancer Controller that allows it to make calls to AWS APIs on your behalf.
+    - name: Download iam_policy.json for AWS Load Balancer Controller
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+        dest: "{{ tmp_dir }}/{{ eks_alb_controller_iam_policy_name }}_iam_policy.json"
+        mode: '0664'
+
+    # Note:  I am _not_ deleting this policy on cleanup as it's a shared policy
+    # that others in the account can use
+    - name: Create an IAM policy using the policy downloaded in the previous step. 
+      shell: >
+        aws iam create-policy \
+        --policy-name {{ eks_alb_controller_iam_policy_name }} \
+        --policy-document "file://{{ tmp_dir }}/{{ eks_alb_controller_iam_policy_name }}_iam_policy.json"
+      ignore_errors: true
+      register: create_eks_load_balancer_controller_iam_policy
+
+    # I didn't see how to look for just a PolicyName from 'aws' CLI 
+    # or from https://docs.ansible.com/ansible/latest/collections/amazon/aws/iam_policy_module.html#ansible-collections-amazon-aws-iam-policy-module
+    # so I'm using a shell + python command to do this.
+    # We will use the ARN to create the ServiceAccount.
+    - name: Check if we have an exising IAM Policy for AWS Load Balancer Controller with PolicyName {{ eks_alb_controller_iam_policy_name}}
+      shell: >
+        aws iam list-policies | \
+        python -c 'import json,sys;data=json.load(sys.stdin)["Policies"]; obj=filter(lambda x: (x["PolicyName"] == "{{ eks_alb_controller_iam_policy_name }}"), data); found=list(obj); print(found[0]["Arn"]) if len(found) > 0 else print("");'
+      register: find_eks_load_balancer_controller_iam_policy_arn
+      ignore_errors: true
+
+    - ansible.builtin.debug:
+        var: find_eks_load_balancer_controller_iam_policy_arn
+      when: ansible_verbosity > 0
+
+    - name: get the ARN of the IAM Role for the ALB Controller '{{ eks_alb_controller_iam_role_name }}'
+      shell: >
+        eksctl get iamserviceaccount \
+        --name aws-load-balancer-controller \
+        --namespace kube-system \
+        --cluster {{ eks_clustername }} \
+        --region {{ region_name }} \
+        --output json | jq -r '.[0].status.roleARN' 
+      register: eks_alb_iam_role_arn
+      ignore_errors: true 
+   
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: eks_alb_iam_role_arn
+      #when: ansible_verbosity > 0
+
+    - name: if needed create an IAM Role for the ALB - '{{ eks_alb_controller_iam_role_name }}'
+      shell: >
+        eksctl create iamserviceaccount \
+        --name aws-load-balancer-controller \
+        --namespace kube-system \
+        --cluster {{ eks_clustername }} \
+        --region {{ region_name }} \
+        --attach-policy-arn {{ find_eks_load_balancer_controller_iam_policy_arn.stdout }} \
+        --approve \
+        --role-name {{ eks_alb_controller_iam_role_name }} \
+        --override-existing-serviceaccounts
+      register: eks_alb_iam_role
+      when: eks_alb_iam_role_arn.stdout == "null"
+
+    - name: Print return information from the previous task
+      ansible.builtin.debug:
+        var: eks_alb_iam_role
+      #when: ansible_verbosity > 0
+
+    # Install cert-manager
+    # Note AWS ALB docs recommend v1.5.4 while newer releases exist, it may be because v1.6.0 removed older APIs
+    - name: Download iam_policy.json for AWS Load Balancer Controller
+      ansible.builtin.get_url:
+        url: https://github.com/cert-manager/cert-manager/releases/download/v1.5.4/cert-manager.yaml
+        dest: "{{ tmp_dir }}/cert-manager-v1.5.4.yaml"
+        mode: '0664'
+ 
+    - name: Apply cert-manager to the cluster.
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ tmp_dir }}/cert-manager-v1.5.4.yaml"
+        kubeconfig: "{{ eks_kubeconfig }}"
+
+    - name: Update the aws-load-balancer-controller_v2_4_7_full.yaml to account for our cluster name
+      template:
+        src: templates/aws-load-balancer-controller_v2_4_7_full.yaml.j2
+        dest: "{{ tmp_dir }}/aws-load-balancer-controller_v2_4_7_full.yaml"
+        mode: 0644
+
+    - name: Apply aws-load-balancer-controller to the cluster - may need to wait for cert-manager webhooks to be up
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ tmp_dir }}/aws-load-balancer-controller_v2_4_7_full.yaml"
+        kubeconfig: "{{ eks_kubeconfig }}"
+      retries: 20
+      delay: 5
+
+    - name: Download v2_4_7_ingclass.yaml for creating an IngressClass and IngressClassParams for the AWS Load Balancer Controller
+      ansible.builtin.get_url:
+        url: https://github.com/kubernetes-sigs/aws-load-balancer-controller/releases/download/v2.4.7/v2_4_7_ingclass.yaml
+        dest: "{{ tmp_dir }}/v2_4_7_ingclass.yaml"
+        mode: '0664'
+ 
+    - name: Apply v2_4_7_ingclass.yaml to the cluster.
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ tmp_dir }}/v2_4_7_ingclass.yaml"
+        kubeconfig: "{{ eks_kubeconfig }}"

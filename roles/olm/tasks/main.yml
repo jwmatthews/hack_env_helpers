@@ -69,3 +69,4 @@
     - catalog-operator
     - olm-operator
     - packageserver
+  #I see an intermittent failure on this step with some runs, would like to add retry logic

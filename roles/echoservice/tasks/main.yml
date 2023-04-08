@@ -1,0 +1,103 @@
+---
+# tasks file for echoservice
+# https://github.com/kubernetes-sigs/aws-load-balancer-controller/tree/main/docs/examples/echoservice
+
+- name: Apply the Echoserver namespace
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: echoserver
+    state: present
+
+- name: Apply the Echoserver deployment 
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: echoserver
+        namespace: echoserver
+      spec:
+        selector:
+          matchLabels:
+            app: echoserver
+        replicas: 1
+        template:
+          metadata:
+            labels:
+              app: echoserver
+          spec:
+            containers:
+            - image: k8s.gcr.io/e2e-test-images/echoserver:2.5
+              imagePullPolicy: Always
+              name: echoserver
+              ports:
+              - containerPort: 8080
+    state: present
+
+- name: Apply the Echoserver deployment 
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: echoserver
+        namespace: echoserver
+      spec:
+        ports:
+          - port: 80
+            targetPort: 8080
+            protocol: TCP
+        type: NodePort
+        selector:
+          app: echoserver
+    state: present
+
+- name: Apply the Echoserver deployment 
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: echoserver
+        namespace: echoserver
+        annotations:
+          alb.ingress.kubernetes.io/scheme: internet-facing
+          alb.ingress.kubernetes.io/tags: Environment=dev,Team=test
+      spec:
+        ingressClassName: alb
+        rules:
+          - http:
+              paths:
+                - path: /
+                  pathType: Exact
+                  backend:
+                    service:
+                      name: echoserver
+                      port:
+                        number: 80
+    state: present
+
+
+
+
+
+- name: Download 2048 game manifest
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/examples/2048/2048_full.yaml 
+    dest: "{{ tmp_dir }}/2048_full.yaml"
+    mode: '0664'
+
+- name: Apply 2048 game manifest to the cluster
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ tmp_dir }}/2048_full.yaml"
+    kubeconfig: "{{ kubeconfig }}"
+
+

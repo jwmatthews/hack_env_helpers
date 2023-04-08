@@ -1,0 +1,21 @@
+---
+# tasks file for game2048
+- name: Creates directory
+  file:
+    path: "{{ tmp_dir }}"
+    state: directory
+    mode: 0775
+
+- name: Download 2048 game manifest
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/examples/2048/2048_full.yaml 
+    dest: "{{ tmp_dir }}/2048_full.yaml"
+    mode: '0664'
+
+- name: Apply 2048 game manifest to the cluster
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ tmp_dir }}/2048_full.yaml"
+    kubeconfig: "{{ kubeconfig }}"
+
+
