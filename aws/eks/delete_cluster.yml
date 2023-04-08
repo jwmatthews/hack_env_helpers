@@ -11,9 +11,21 @@
         --namespace kube-system \
         --cluster {{ eks_clustername }} \
         --region {{ region_name }} 
-    
+      ignore_errors: true
+  
+    - name: delete an IAM Role for the ALB '{{ eks_alb_controller_iam_role_name}}' for the eks cluster '{{ eks_clustername }}' in {{ region_name }} 
+      shell: >
+        eksctl delete iamserviceaccount \
+        --name aws-load-balancer-controller \
+        --namespace kube-system \
+        --cluster {{ eks_clustername }} \
+        --region {{ region_name }} 
+      ignore_errors: true
+
     - name: delete the eks cluster '{{ eks_clustername }}' in {{ region_name }}  
       shell: >
         eksctl delete cluster \
         --name {{ eks_clustername }} \
         --region {{ region_name }} \
+      ignore_errors: true
+

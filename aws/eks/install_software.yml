@@ -22,3 +22,12 @@
       role: konveyor
       kubeconfig: "{{ eks_kubeconfig }}"
       tmp_dir: "{{ tmp_dir }}"
+
+    - name: "Install the game 2048 to test ALB on {{ eks_clustername }} in {{ region_name }}"
+      role: game2048
+      kubeconfig: "{{ eks_kubeconfig }}"
+      tmp_dir: "{{ tmp_dir }}"
+
+    - name: "Install the echoservice to test ALB on {{ eks_clustername }} in {{ region_name }}"
+      role: echoservice
+      kubeconfig: "{{ eks_kubeconfig }}"

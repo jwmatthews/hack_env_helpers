@@ -1,6 +1,10 @@
 # Create an EKS Cluster
-
 This directory will help you deploy an EKS Cluster with the [EBS CSI AddOn](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) configured.  It relies heavily on the [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) CLI tools
+
+## Overview
+Amazon Elastic Kubernetes Service (EKS) is a deployment of upstream Kubernetes on Amazon Web Services infrastructure with integrations into AWS features such as EBSCSI for storage and AWS LoadBalancers for Ingress.  
+
+This is appealing to Konveyor developers as it gives us another Kubernetes environment to test beyond minikube.
 
 ## Setup
 * One time setup steps so you can use these scripts
@@ -17,7 +21,9 @@ This directory will help you deploy an EKS Cluster with the [EBS CSI AddOn](http
   ```
   ./init.sh
   ```
-    *  If you need to update the venv requirements, run: `pip3 freeze > requirements.txt`
+    *  This will create a 'env' directory for the python venv which contains Ansible and it's collections installed
+       *  If you need to update the venv requirements, run: `pip3 freeze > requirements.txt`
+       *  To update the Ansible collections, update `requirements.yml` manually
 ### AWS Client setup
 1. Install the `aws` CLI tool
    * See:  https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
@@ -25,6 +31,12 @@ This directory will help you deploy an EKS Cluster with the [EBS CSI AddOn](http
    * See: https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
 1. Configure your AWS credentials so they are available in the shell
    * See: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html
+1. Verify you are able to run both [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) from your shell 
+   * Example: `aws ec2 describe-instances`
+   * Example: `eksctl get clusters`
+1. Extras that may be needed
+   * In order to be able to run `aws iam help`
+     * Ensure you have `groff` installed
 
 ## Provision EKS Cluster
 Run
@@ -53,3 +65,33 @@ source env/bin/activate
 ./delete_cluster.sh
 ```
    * This will take on order of ~10 minutes
+
+
+# Amazon EKS Documentation
+Below may help us as we run into problems or need to learn more on the environment specifics 
+* [Amazon Elastic Kubernetes Service Documentation](https://docs.aws.amazon.com/eks/index.html)
+  * [EKS Networking](https://docs.aws.amazon.com/eks/latest/userguide/eks-networking.html)
+    * [Amazon EKS Best Practices Guide for Networking](https://aws.github.io/aws-eks-best-practices/networking/index/)
+    * [Amazon VPC CNI K8S Troubleshooting](https://github.com/aws/amazon-vpc-cni-k8s/blob/master/docs/troubleshooting.md) 
+  * [Amazon EKS AddOns](https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html)
+    * [Amazon EBS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
+      * Note:  As of ~k8s 1.23 the in tree support for EBS has stopped being used and EBSCSI driver is required for dynamic PV provisioning.
+  * [Installing the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
+    * [How AWS Load Balancer controller works](https://github.com/kubernetes-sigs/aws-load-balancer-controller/blob/main/docs/how-it-works.md)
+    * [Application load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)
+    * [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html)
+* [eksctl](https://eksctl.io/)
+  * [Manage IAM users and roles](https://eksctl.io/usage/iam-identity-mappings/)
+  * [IAM Roles for Service Accounts](https://eksctl.io/usage/iamserviceaccounts/)
+
+## Debugging
+### AWS Load Balancer
+   * aws-load-balancer-controller-* is the pod running the controller in 'kube-system'
+```
+kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+```
+
+
+## Tips
+### AWS Load Balancer
+   * After deploying game2048 and checking the Ingress, you may need to wait several minutes before you can access the service from your browser.  I saw ~5 minute delay first time I tested before I could resolve the address from the Ingress
