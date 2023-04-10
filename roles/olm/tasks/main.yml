@@ -65,8 +65,11 @@
     wait_condition:
       type: Available
       status: True
+  register: result
+  until: result is succeeded
+  retries: 20
+  delay: 5
   loop:
     - catalog-operator
     - olm-operator
     - packageserver
-  #I see an intermittent failure on this step with some runs, would like to add retry logic

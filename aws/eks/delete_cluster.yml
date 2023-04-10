@@ -29,3 +29,6 @@
         --region {{ region_name }} \
       ignore_errors: true
 
+# Notes:
+# - Intentionally not deleting {{ eks_alb_controller_iam_policy_name }} 
+#   - Leaving that policy as it can be shared and used by others

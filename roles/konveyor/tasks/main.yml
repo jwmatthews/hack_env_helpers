@@ -32,7 +32,10 @@
       reason: InitialNamesAccepted
   loop:
     - tackles.tackle.konveyor.io
-  #I see an intermittent failure on this step with some runs, would like to add retry logic
+  register: result
+  until: result is succeeded
+  retries: 20
+  delay: 5
 
 - name: Apply a Tackle manifest to the cluster
   kubernetes.core.k8s:
