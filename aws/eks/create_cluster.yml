@@ -253,6 +253,8 @@
         state: present
         src: "{{ tmp_dir }}/aws-load-balancer-controller_v2_4_7_full.yaml"
         kubeconfig: "{{ eks_kubeconfig }}"
+      register: result
+      until: result is succeeded
       retries: 20
       delay: 5
 
