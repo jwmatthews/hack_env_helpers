@@ -1,5 +1,7 @@
 # Create an EKS Cluster
-This directory will help you deploy an EKS Cluster with the [EBS CSI AddOn](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) configured.  It relies heavily on the [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) CLI tools
+This directory will help you deploy an EKS Cluster with the [EBS CSI AddOn](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) and [Amazon Load Balancer controller](https://github.com/kubernetes-sigs/aws-load-balancer-controller) configured.  It relies heavily on the [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) CLI tools
+ * [EBS CSI AddOn](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html) allows dynamic PV provisioning
+ * [Amazon Load Balancer controller](https://github.com/kubernetes-sigs/aws-load-balancer-controller) provides an Ingress controller that sets up application load balancing
 
 ## Overview
 Amazon Elastic Kubernetes Service (EKS) is a deployment of upstream Kubernetes on Amazon Web Services infrastructure with integrations into AWS features such as EBSCSI for storage and AWS LoadBalancers for Ingress.  
@@ -80,18 +82,26 @@ Below may help us as we run into problems or need to learn more on the environme
     * [How AWS Load Balancer controller works](https://github.com/kubernetes-sigs/aws-load-balancer-controller/blob/main/docs/how-it-works.md)
     * [Application load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)
     * [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html)
+    * [Ingress annotations](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/)
 * [eksctl](https://eksctl.io/)
   * [Manage IAM users and roles](https://eksctl.io/usage/iam-identity-mappings/)
   * [IAM Roles for Service Accounts](https://eksctl.io/usage/iamserviceaccounts/)
 
 ## Debugging
 ### AWS Load Balancer
+   * Ensure your Ingress has: 
+      ```
+      spec:
+      ingressClassName: alb
+      ```
    * aws-load-balancer-controller-* is the pod running the controller in 'kube-system'
-```
-kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
-```
-
-
-## Tips
-### AWS Load Balancer
-   * After deploying game2048 and checking the Ingress, you may need to wait several minutes before you can access the service from your browser.  I saw ~5 minute delay first time I tested before I could resolve the address from the Ingress
+      ```
+      kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+      ```
+   * `internal-*`
+  
+      If your ingress starts with `internal-` you probably will want to update it to be internet facing by adding this annotation to the Ingress object
+      ```
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      ```
+   * If you have a public ingress, but it's not resolving...try waiting a few minutes, I've seen ~5 minute delays before the address the ingress had was accessible.
