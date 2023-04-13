@@ -111,6 +111,21 @@ Below may help us as we run into problems or need to learn more on the environme
   * [IAM Roles for Service Accounts](https://eksctl.io/usage/iamserviceaccounts/)
 
 ## Debugging
+### Check that dynamic PV Provisioning is working for the cluster
+* Provisioning PVC's with RWO is supported via the ebscsi driver, there is a sample app deployed 
+   ```
+   $ kubectl get pvc ebs-claim -n testebs
+   NAME        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+   ebs-claim   Bound    pvc-2b6e1543-ef3d-42e6-aa63-d7f5cd2f5970   4Gi        RWO            gp2            3d7h
+   ```
+* We could configure RWX support via EFS but that is not configured as of now
+### Check that Ingress is working the cluster
+* Ingress via the Amazon Load Balancer controller is configured with sample app 'game-2048'
+   ```
+   $ kubectl get ingress -n game-2048
+   NAME           CLASS   HOSTS   ADDRESS                                                                  PORTS   AGE
+   ingress-2048   alb     *       k8s-game2048-ingress2-5590c303a6-822812758.us-east-1.elb.amazonaws.com   80      3d7h
+   ```
 ### AWS Load Balancer
    * aws-load-balancer-controller-* is the pod running the controller in 'kube-system'
       ```
