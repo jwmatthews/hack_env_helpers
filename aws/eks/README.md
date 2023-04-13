@@ -68,6 +68,25 @@ source env/bin/activate
 ```
    * This will take on order of ~10 minutes
 
+## Adding other IAM users to this EKS cluster
+```
+source env/bin/activate
+./add_users.sh
+```
+   * This will take on order of ~1 minute
+   * It will look up all of the IAM Users in the IAM Group {{ my_eks_usage_iam_group_name }} and add them to "system:masters" on the current configured EKS cluster
+
+* You can confirm who is currently configured for the cluster by looking at:
+      ```
+      kubectl get configmap aws-auth -n kube-system -o yaml
+      ```
+
+## Generating a Kubeconfig
+* the `create_cluster.sh` script will generate a kubeconfig, but if you want to generate another kubeconfig for an existing EKS cluster you can run:
+```
+cd helpers
+./write_kubeconfig $clusername $region
+```
 
 # Amazon EKS Documentation
 Below may help us as we run into problems or need to learn more on the environment specifics 
@@ -78,6 +97,10 @@ Below may help us as we run into problems or need to learn more on the environme
   * [Amazon EKS AddOns](https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html)
     * [Amazon EBS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
       * Note:  As of ~k8s 1.23 the in tree support for EBS has stopped being used and EBSCSI driver is required for dynamic PV provisioning.
+  * [How does AWS IAM Authenticator work?](https://github.com/kubernetes-sigs/aws-iam-authenticator#how-does-it-work)
+    * As of April 2023 it's not possible to map an IAM Group to an EKS cluster
+      * Open issue in [kubernetes-sigs/aws-iam-authenticator: Can I not add an IAM group to my ConfigMap? #176](https://github.com/kubernetes-sigs/aws-iam-authenticator/issues/176)
+      * Deep dive and workaround:  [Enabling AWS IAM Group Access to an EKS Cluster Using RBAC](https://eng.grip.security/enabling-aws-iam-group-access-to-an-eks-cluster-using-rbac)
   * [Installing the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
     * [How AWS Load Balancer controller works](https://github.com/kubernetes-sigs/aws-load-balancer-controller/blob/main/docs/how-it-works.md)
     * [Application load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/alb-ingress.html)
@@ -89,19 +112,29 @@ Below may help us as we run into problems or need to learn more on the environme
 
 ## Debugging
 ### AWS Load Balancer
+   * aws-load-balancer-controller-* is the pod running the controller in 'kube-system'
+      ```
+      kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+      ```
    * Ensure your Ingress has: 
       ```
       spec:
       ingressClassName: alb
       ```
-   * aws-load-balancer-controller-* is the pod running the controller in 'kube-system'
-      ```
-      kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
-      ```
    * `internal-*`
-  
       If your ingress starts with `internal-` you probably will want to update it to be internet facing by adding this annotation to the Ingress object
       ```
       alb.ingress.kubernetes.io/scheme: internet-facing
       ```
+   * If your Service is using a ClusterIP you will need below annotation
+      ```
+      alb.ingress.kubernetes.io/target-type: ip
+      ```
+        * Impression is ALB likes to work with NodePort by default
+        * Without the annotation and using ClusterIP in the service I saw below error
+            ```
+            kubectl logs -f -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+
+            {"level":"error","ts":1681061324.959598,"logger":"controller.ingress","msg":"Reconciler error","name":"tackle","namespace":"konveyor-tackle","error":"InvalidParameter: 1 validation error(s) found.\n- minimum field value of 1, CreateTargetGroupInput.Port.\n"}
+            ```
    * If you have a public ingress, but it's not resolving...try waiting a few minutes, I've seen ~5 minute delays before the address the ingress had was accessible.

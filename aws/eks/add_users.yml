@@ -1,0 +1,27 @@
+---
+  - name: "Add IAM Users to EKS Cluster {{ eks_clustername }} in {{ region_name }}"
+    hosts: localhost
+    connection: local 
+    tasks:
+
+    # See: https://docs.ansible.com/ansible/latest/collections/amazon/aws/iam_user_info_module.html#ansible-collections-amazon-aws-iam-user-info-module
+    # Note this requires at leas amazon.aws > 5.0.0, I originally had an older 3.0.0 installed with only ec2 modules 
+    # and lost some time debugging why this didn't work.
+    # Alternative from CLI: $ aws iam get-group --group-name MyGroupName
+    - name: Get IAM users from IAM Group {{ my_eks_usage_iam_group_name }}
+      amazon.aws.iam_user_info:
+        group: "{{ my_eks_usage_iam_group_name }}"
+        region: "{{ region_name }}"
+      register: iam_group_users
+
+    - name: Add all IAM Users from group {{ my_eks_usage_iam_group_name }}
+      shell: >
+        eksctl create iamidentitymapping \
+        --cluster  {{ eks_clustername }} \
+        --region {{ region_name }} \
+        --arn {{ item.arn }} \
+        --group system:masters \
+        --username {{ item.user_name }}
+      loop: "{{ iam_group_users.iam_users }}" 
+
+    
