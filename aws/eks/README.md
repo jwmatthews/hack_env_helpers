@@ -36,6 +36,8 @@ This is appealing to Konveyor developers as it gives us another Kubernetes envir
 1. Verify you are able to run both [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) from your shell 
    * Example: `aws ec2 describe-instances`
    * Example: `eksctl get clusters`
+1. Install `jq`
+   * https://stedolan.github.io/jq/download/
 1. Extras that may be needed
    * In order to be able to run `aws iam help`
      * Ensure you have `groff` installed
