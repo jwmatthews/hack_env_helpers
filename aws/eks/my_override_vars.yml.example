@@ -14,6 +14,9 @@ my_eks_usage_iam_group_name: Migration
 #eks_worker_instancetype: t3.xlarge
 
 # Update 'eks_clusterversion' to the Kubernetes version you want
+# Note:  The version of k8s available to be deployed is controlled 
+#        by the eksctl tool, you will want to keep it updated
 #eks_clusterversion: 1.25
+
 
 

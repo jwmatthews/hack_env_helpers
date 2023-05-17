@@ -48,5 +48,6 @@
         namespace: konveyor-tackle 
       spec:
         rwx_supported: "false"
-        feature_auth_required: "false"
+        feature_auth_required: "true"
+        ui_ingress_class_name: "alb"
     state: present

@@ -31,9 +31,10 @@ This is appealing to Konveyor developers as it gives us another Kubernetes envir
    * See:  https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 1. Install the `eksctl` CLI tool
    * See: https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
-1. Configure your AWS credentials so they are available in the shell
+     * Note:  You will want to keep `eksctl` updated so you can deploy new versions of k8s as EKS adopts them.
+2. Configure your AWS credentials so they are available in the shell
    * See: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html
-1. Verify you are able to run both [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) from your shell 
+3. Verify you are able to run both [aws](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [eksctl](https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html) from your shell 
    * Example: `aws ec2 describe-instances`
    * Example: `eksctl get clusters`
 1. Install `jq`
