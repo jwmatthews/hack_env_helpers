@@ -1,2 +1,15 @@
 ---
 # defaults file for konveyor
+konveyor_namespace: konveyor-tackle
+
+# Setting to True will skip the use of konveyor_operator_channel and use a custom CatalogSource instead
+konveyor_install_unstable_builds: False
+
+# Operator channels:  
+# alpha - Test releases, not recommended
+# konveyor-0.1 - Latest stable release in the 0.1.z series
+konveyor_operator_channel: konveyor-0.1 
+
+rwx_supported: False
+feature_auth_required: True
+ui_ingress_class_name: "alb"

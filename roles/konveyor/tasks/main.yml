@@ -1,22 +1,78 @@
 ---
 # tasks file for konveyor
-- name: Creates directory
-  file:
-    path: "{{ tmp_dir }}"
-    state: directory
-    mode: 0775
-
-- name: Download konveyor/tackle2-operator/main/tackle-k8s.yaml 
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/konveyor/tackle2-operator/main/tackle-k8s.yaml
-    dest: "{{ tmp_dir }}/tackle-k8s.yaml"
-    mode: '0664'
-
-- name: Apply tackle-k8s.yaml to the cluster.
+- name: Create namespace - {{ konveyor_namespace }}
   kubernetes.core.k8s:
-    state: present
-    src: "{{ tmp_dir }}/tackle-k8s.yaml"
     kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ konveyor_namespace }}"
+
+- name: Create OperatorGroup
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition: 
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: operatorgroup
+        namespace: "{{ konveyor_namespace }}"
+      spec:
+        targetNamespaces:
+        - "{{ konveyor_namespace }}"
+
+# If we want to install :latest we need to define our own CatalogSource   
+- name: Custom block for unreleased images 
+  block:
+    - name: Create CustomCatalogSource to deploy unstable bleeding edge unreleased images that track 'main' since 'konveyor_install_unstable_builds' is {{ konveyor_install_unstable_builds }}
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        definition: 
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata:
+            name: konveyor
+            namespace: "{{ konveyor_namespace }}"
+          spec:
+            displayName: Konveyor Operator
+            publisher: Konveyor
+            sourceType: grpc
+            image: quay.io/konveyor/tackle2-operator-index:latest
+
+    - name: Create Subscription to our custom CatalogSource
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        definition:
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: Subscription
+          metadata:
+            name: konveyor-operator
+            namespace: "{{ konveyor_namespace }}"
+          spec:
+            channel: development
+            installPlanApproval: Automatic
+            name: konveyor-operator
+            source: konveyor
+            sourceNamespace: "{{ konveyor_namespace }}"
+  when: konveyor_install_unstable_builds|bool
+
+# Assuming we did not create a custom CatalogSource above, we create a Subscription against a published channel in community-operators
+- name: Create Subscription to konveyor-operator published in channel "{{ konveyor_operator_channel }}" in community-operators since konveyor_install_unstable_builds is {{ konveyor_install_unstable_builds }}
+  kubernetes.core.k8s:
+    kubeconfig: "{{ kubeconfig }}"
+    definition:        
+      apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: my-konveyor-operator
+        namespace: "{{ konveyor_namespace }}"
+      spec:
+        channel: "{{ konveyor_operator_channel }}"
+        name: konveyor-operator
+        source: operatorhubio-catalog
+        sourceNamespace: olm
+  when: not konveyor_install_unstable_builds|bool
 
 - name: Wait for Tackle CRD to be established
   kubernetes.core.k8s:
@@ -45,9 +101,9 @@
       kind: Tackle
       metadata:
         name: "tackle"
-        namespace: konveyor-tackle 
+        namespace: "{{ konveyor_namespace }}" 
       spec:
-        rwx_supported: "false"
-        feature_auth_required: "true"
-        ui_ingress_class_name: "alb"
+        rwx_supported: "{{ rwx_supported }}"
+        feature_auth_required: "{{ feature_auth_required }}"
+        ui_ingress_class_name: "{{ ui_ingress_class_name }}"
     state: present
