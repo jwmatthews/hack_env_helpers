@@ -91,6 +91,22 @@ cd helpers
 ./write_kubeconfig $clusername $region
 ```
 
+## Access Konveyor UI
+1. export KUBECONFIG=`pwd`/{REPLACE_MYNAME}.kubeconfig
+   * Look at your `my_override_vars.yml` and see the name you chose for ```myname```
+1. Leverage the ALB Ingress automatically created by the konveyor operator: ```ui_ingress_class_name: "alb"```
+   * ```kubectl get ingress -n konveyor-tackle```
+      * You could also run a local port-forward if you saw an issue with the Ingress
+         * ```kubectl port-forward svc/tackle-ui 7080:8080 -n konveyor-tackle```
+         * Then open browser to http://localhost:7080
+1. Default login info for first time logging in is defined in https://github.com/konveyor/tackle2-hub/blob/main/auth/users.yaml#L2
+   * Username: ```admin```
+   * Password: ```Passw0rd!```
+1. After successful login it will prompt for a new password for ```admin``` 
+
+## Getting Started with an Analysis
+1. Follow an example here:  https://github.com/konveyor/example-applications/blob/main/example-1/README.md
+
 # Amazon EKS Documentation
 Below may help us as we run into problems or need to learn more on the environment specifics 
 * [Amazon Elastic Kubernetes Service Documentation](https://docs.aws.amazon.com/eks/index.html)
