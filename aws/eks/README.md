@@ -8,6 +8,8 @@ Amazon Elastic Kubernetes Service (EKS) is a deployment of upstream Kubernetes o
 
 This is appealing to Konveyor developers as it gives us another Kubernetes environment to test beyond minikube.
 
+* Note:  There is an alternative path to getting Konveyor available on an EKS cluster leveraging work from Claranet: https://github.com/claranet-ch/konveyor-eks-blueprint-addon
+
 ## Setup
 * One time setup steps so you can use these scripts
 ### Create `my_override_vars.yml`
